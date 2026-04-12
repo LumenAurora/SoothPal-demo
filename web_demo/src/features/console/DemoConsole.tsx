@@ -45,6 +45,9 @@ export function DemoConsole({ onAutoPlay, onJumpTo }: DemoConsoleProps) {
           <button type="button" onClick={() => onJumpTo('weekly-section')}>
             D 周报
           </button>
+          <button type="button" onClick={() => onJumpTo('ask-section')}>
+            E 问答
+          </button>
           <button type="button" onClick={() => onJumpTo('family-section')}>
             亲情号
           </button>

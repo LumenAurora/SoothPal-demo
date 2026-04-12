@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
 
 import { AIExtractPanel } from '../features/ai-extract/AIExtractPanel';
+import { AskRagPanel } from '../features/ask-rag/AskRagPanel';
 import { DemoConsole } from '../features/console/DemoConsole';
 import { FamilyPanel } from '../features/family/FamilyPanel';
 import { PainCapturePanel } from '../features/pain-capture/PainCapturePanel';
@@ -64,6 +65,7 @@ const stepPlan = [
   { scenarioId: 'rising', sectionId: 'extract-section' },
   { scenarioId: 'critical', sectionId: 'risk-section' },
   { scenarioId: 'critical', sectionId: 'weekly-section' },
+  { scenarioId: 'critical', sectionId: 'ask-section' },
   { scenarioId: 'critical', sectionId: 'family-section' },
 ];
 
@@ -148,9 +150,10 @@ export default function App() {
         </motion.div>
 
         <PainCapturePanel />
-        <AIExtractPanel />
+        <AIExtractPanel key={activeScenario.id} />
         <RiskAlertPanel />
         <WeeklyReportPanel />
+        <AskRagPanel />
         <FamilyPanel />
       </main>
 

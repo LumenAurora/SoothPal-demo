@@ -620,6 +620,34 @@ input[type='range'] {
   line-height: 1.65;
 }
 
+.voice-input {
+  width: 100%;
+  min-height: 102px;
+  resize: vertical;
+  border-radius: 12px;
+  border: 1px solid rgba(119, 165, 245, 0.32);
+  background: rgba(12, 25, 50, 0.56);
+  color: #edf5ff;
+  padding: 10px;
+  line-height: 1.6;
+}
+
+.voice-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.voice-btn {
+  padding: 7px 11px;
+}
+
+.voice-tip {
+  margin-top: 2px;
+  color: #9fc1f3;
+  font-size: 12px;
+}
+
 .citation-tag {
   border-radius: 999px;
   display: inline-flex;
@@ -704,6 +732,87 @@ input[type='range'] {
   justify-content: flex-end;
   gap: 8px;
   margin-top: 12px;
+}
+
+.ask-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 18px;
+}
+
+.ask-query,
+.ask-answer {
+  border-radius: 18px;
+  border: 1px solid rgba(114, 159, 239, 0.3);
+  background: rgba(20, 38, 75, 0.58);
+  padding: 16px;
+}
+
+.ask-input {
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+  border-radius: 12px;
+  border: 1px solid rgba(116, 162, 241, 0.32);
+  background: rgba(12, 27, 53, 0.56);
+  color: #edf5ff;
+  padding: 10px;
+  line-height: 1.6;
+}
+
+.ask-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ask-note {
+  margin-top: 10px;
+  color: #9cb8e4;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ask-answer--high-risk {
+  border-color: rgba(255, 114, 128, 0.58);
+  box-shadow: 0 0 0 1px rgba(255, 109, 124, 0.2), 0 16px 30px rgba(108, 26, 35, 0.2);
+}
+
+.ask-answer__text {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: var(--font-body);
+  line-height: 1.65;
+  color: #f1f7ff;
+}
+
+.ask-citations {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.ask-citation-card {
+  border-radius: 12px;
+  border: 1px solid rgba(108, 149, 226, 0.3);
+  background: rgba(27, 50, 92, 0.58);
+  padding: 8px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.ask-citation-card p {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.ask-citation-card span {
+  color: #a8c5ef;
+  font-family: var(--font-mono);
+  font-size: 11px;
 }
 
 .risk-card {
@@ -908,7 +1017,8 @@ input[type='range'] {
 
   .capture-layout,
   .extract-layout,
-  .weekly-layout {
+  .weekly-layout,
+  .ask-layout {
     grid-template-columns: 1fr;
   }
 

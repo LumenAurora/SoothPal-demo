@@ -165,6 +165,7 @@ export default function App() {
   const [submittedPain, setSubmittedPain] = useState(false);
   const [tab, setTab] = useState<WorkspaceTab>('content');
   const [reportPage, setReportPage] = useState<ReportPage>('sample');
+  const [activeActionId, setActiveActionId] = useState('');
   const [sampleReport, setSampleReport] = useState<PainSampleReport | null>(null);
   const [askInput, setAskInput] = useState('');
   const [askReply, setAskReply] = useState('');
@@ -242,6 +243,12 @@ export default function App() {
     setTab('report');
     setReportPage('showcase');
     window.setTimeout(() => jumpToSection(sectionId), 220);
+  };
+
+  const playActionFx = (actionId: string, next: () => void) => {
+    setActiveActionId(actionId);
+    next();
+    window.setTimeout(() => setActiveActionId(''), 760);
   };
 
   const handleHomeFlowAction = (action: HomeStepAction) => {
@@ -765,88 +772,155 @@ export default function App() {
                         )}
                       </section>
                     ) : (
-                      <section className="showcase-shell" key="showcase-page">
-                        <article className="showcase-hero-card">
-                          <p className="showcase-kicker">SoothPal 动态演示</p>
-                          <h3>动态演示页：滚动分屏展示完整价值链</h3>
+                      <section className="showcase-shell immersive-shell" key="showcase-page">
+                        <article className="immersive-hero">
+                          <p className="immersive-kicker">SoothPal 沉浸式产品介绍</p>
+                          <h3>一镜到底讲清「采集-分析-预警-协同」的完整闭环</h3>
                           <p>
-                            我们把原有链路重构为逐页滚动的动态展示：
-                            从采集、抽取、预警、周报到问答与家属协同，
-                            每一屏只讲一个关键价值点，整体观感更接近产品官网叙事体验。
+                            这一页不是传统功能堆叠，而是像成熟产品官网一样，
+                            用逐屏叙事让观众顺着价值链沉浸式看完全流程。
+                            每个按钮都可点击并带反馈动效，交互会有明确“响应感”。
                           </p>
                           <div className="showcase-actions">
-                            <button type="button" className="primary-btn" onClick={() => setReportPage('sample')}>
-                              去生成样例报告
+                            <button
+                              type="button"
+                              className={`primary-btn immersive-action-btn ${activeActionId === 'to-sample' ? 'immersive-action-btn--active' : ''}`}
+                              onClick={() => playActionFx('to-sample', () => setReportPage('sample'))}
+                            >
+                              切到样例报告页
                             </button>
-                            <button type="button" className="ghost-btn" onClick={() => setReportPage('sample')}>
-                              返回样例报告页
+                            <button
+                              type="button"
+                              className={`ghost-btn immersive-action-btn ${activeActionId === 'to-risk' ? 'immersive-action-btn--active' : ''}`}
+                              onClick={() => playActionFx('to-risk', () => jumpToSection('risk-section'))}
+                            >
+                              直达风险预警分屏
                             </button>
                           </div>
                         </article>
 
-                        <section className="showcase-scroll-deck" aria-label="动态演示滚动分屏">
-                          <article className="showcase-scroll-page showcase-scroll-page--capture">
-                            <header className="showcase-scroll-page__head">
-                              <span>01 / 零负担采集</span>
-                              <h4>我们用 2D 人体交互替代冗长问卷</h4>
-                              <p>让用户以最低认知负担完成疼痛部位与强度上报。</p>
+                        <section className="immersive-scroll-deck" aria-label="沉浸式产品滚动分屏">
+                          <article id="capture-section" className="immersive-scroll-page immersive-scroll-page--capture">
+                            <header className="immersive-scroll-page__head">
+                              <span>01 / 零门槛采集</span>
+                              <h4>两步完成疼痛描述，降低填写摩擦</h4>
+                              <p>用户无需医学术语，只要点击区域和强度即可开始留痕。</p>
+                              <div className="immersive-scroll-page__actions">
+                                <button
+                                  type="button"
+                                  className={`ghost-btn immersive-action-btn ${activeActionId === 'capture-assess' ? 'immersive-action-btn--active' : ''}`}
+                                  onClick={() => playActionFx('capture-assess', openAssessment)}
+                                >
+                                  现场触发 2D 评估弹窗
+                                </button>
+                              </div>
                             </header>
-                            <div className="showcase-scroll-page__body">
+                            <div className="immersive-scroll-page__body">
                               <PainCapturePanel />
                             </div>
                           </article>
 
-                          <article className="showcase-scroll-page showcase-scroll-page--extract">
-                            <header className="showcase-scroll-page__head">
+                          <article className="immersive-scroll-page immersive-scroll-page--extract">
+                            <header className="immersive-scroll-page__head">
                               <span>02 / AI 结构化</span>
-                              <h4>我们把自然语言自动提炼为结构化指标</h4>
-                              <p>保留原始语义，同时生成可计算、可追踪的数据字段。</p>
+                              <h4>把自然语言自动转换成可计算字段</h4>
+                              <p>系统保留原始语义，同时抽取时序趋势与重点症状。</p>
+                              <div className="immersive-scroll-page__actions">
+                                <button
+                                  type="button"
+                                  className={`ghost-btn immersive-action-btn ${activeActionId === 'extract-ask' ? 'immersive-action-btn--active' : ''}`}
+                                  onClick={() => playActionFx('extract-ask', () => jumpToSection('ask-section'))}
+                                >
+                                  查看后续问答联动
+                                </button>
+                              </div>
                             </header>
-                            <div className="showcase-scroll-page__body">
+                            <div className="immersive-scroll-page__body">
                               <AIExtractPanel />
                             </div>
                           </article>
 
-                          <article className="showcase-scroll-page showcase-scroll-page--risk">
-                            <header className="showcase-scroll-page__head">
-                              <span>03 / 风险分级</span>
-                              <h4>我们输出可解释、可审计的分级预警</h4>
-                              <p>风险结论由规则引擎产生，AI 负责解释与行动建议。</p>
+                          <article id="risk-section" className="immersive-scroll-page immersive-scroll-page--risk">
+                            <header className="immersive-scroll-page__head">
+                              <span>03 / 风险预警</span>
+                              <h4>规则引擎给出可解释风险等级与行动建议</h4>
+                              <p>系统对高危模式即时抬升优先级，保证提醒及时且可信。</p>
+                              <div className="immersive-scroll-page__actions">
+                                <button
+                                  type="button"
+                                  className={`ghost-btn immersive-action-btn ${activeActionId === 'risk-sample' ? 'immersive-action-btn--active' : ''}`}
+                                  onClick={() =>
+                                    playActionFx('risk-sample', () => {
+                                      handleGenerateSampleReport();
+                                      setReportPage('sample');
+                                    })
+                                  }
+                                >
+                                  一键生成对应样例报告
+                                </button>
+                              </div>
                             </header>
-                            <div className="showcase-scroll-page__body">
+                            <div className="immersive-scroll-page__body">
                               <RiskAlertPanel />
                             </div>
                           </article>
 
-                          <article className="showcase-scroll-page showcase-scroll-page--weekly">
-                            <header className="showcase-scroll-page__head">
-                              <span>04 / 周报生成</span>
-                              <h4>我们把复杂趋势压缩为一页可读摘要</h4>
-                              <p>让患者、家属和服务团队在同一视图快速达成共识。</p>
+                          <article id="weekly-section" className="immersive-scroll-page immersive-scroll-page--weekly">
+                            <header className="immersive-scroll-page__head">
+                              <span>04 / 周报洞察</span>
+                              <h4>把多维波动压缩成一页可读趋势</h4>
+                              <p>无需翻阅多屏数据，也能快速看懂变化、风险与行动重点。</p>
+                              <div className="immersive-scroll-page__actions">
+                                <button
+                                  type="button"
+                                  className={`ghost-btn immersive-action-btn ${activeActionId === 'weekly-family' ? 'immersive-action-btn--active' : ''}`}
+                                  onClick={() => playActionFx('weekly-family', () => jumpToSection('family-section'))}
+                                >
+                                  跳转到家属协同分屏
+                                </button>
+                              </div>
                             </header>
-                            <div className="showcase-scroll-page__body">
+                            <div className="immersive-scroll-page__body">
                               <WeeklyReportPanel />
                             </div>
                           </article>
 
-                          <article className="showcase-scroll-page showcase-scroll-page--ask">
-                            <header className="showcase-scroll-page__head">
-                              <span>05 / RAG 问答</span>
-                              <h4>我们提供带引用与护栏的个体化问答</h4>
-                              <p>在可解释前提下提高回答质量，并对高危问题优先就医引导。</p>
+                          <article id="ask-section" className="immersive-scroll-page immersive-scroll-page--ask">
+                            <header className="immersive-scroll-page__head">
+                              <span>05 / 安全问答</span>
+                              <h4>RAG 回答不仅给结论，还给依据与边界</h4>
+                              <p>高风险语义会被主动识别并引导线下就医，避免误导。</p>
+                              <div className="immersive-scroll-page__actions">
+                                <button
+                                  type="button"
+                                  className={`ghost-btn immersive-action-btn ${activeActionId === 'ask-top' ? 'immersive-action-btn--active' : ''}`}
+                                  onClick={() => playActionFx('ask-top', () => jumpToSection('capture-section'))}
+                                >
+                                  回到采集起点分屏
+                                </button>
+                              </div>
                             </header>
-                            <div className="showcase-scroll-page__body">
+                            <div className="immersive-scroll-page__body">
                               <AskRagPanel />
                             </div>
                           </article>
 
-                          <article className="showcase-scroll-page showcase-scroll-page--family">
-                            <header className="showcase-scroll-page__head">
-                              <span>06 / 亲情协同</span>
-                              <h4>我们用最小必要信息完成家属协同闭环</h4>
-                              <p>共享趋势与预警，不暴露多余隐私字段。</p>
+                          <article id="family-section" className="immersive-scroll-page immersive-scroll-page--family">
+                            <header className="immersive-scroll-page__head">
+                              <span>06 / 家属协同</span>
+                              <h4>最小必要信息共享，形成陪伴闭环</h4>
+                              <p>在保护隐私的前提下，让家属看见趋势并参与照护节奏。</p>
+                              <div className="immersive-scroll-page__actions">
+                                <button
+                                  type="button"
+                                  className={`ghost-btn immersive-action-btn ${activeActionId === 'family-sample' ? 'immersive-action-btn--active' : ''}`}
+                                  onClick={() => playActionFx('family-sample', () => setReportPage('sample'))}
+                                >
+                                  返回样例报告页收尾
+                                </button>
+                              </div>
                             </header>
-                            <div className="showcase-scroll-page__body">
+                            <div className="immersive-scroll-page__body">
                               <FamilyPanel />
                             </div>
                           </article>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 
 import { AIExtractPanel } from '../features/ai-extract/AIExtractPanel';
 import { AskRagPanel } from '../features/ask-rag/AskRagPanel';
@@ -10,27 +10,86 @@ import { painRegions, scenarios } from '../shared/mock/demoData';
 import { useDemoStore } from '../store/demoStore';
 
 type WorkspaceTab = 'content' | 'community' | 'profile' | 'report';
+type HomeStepAction = 'assessment' | 'risk' | 'weekly' | 'none';
+type QualityLevel = 'none' | 'low' | 'medium' | 'high';
 
-const promptText = '请告诉我，您正在经历何种疼痛困扰？';
-const emergencyPattern = /突发|剧痛|电击|发作|麻木|无力|走不了|睡不着|8分|9分|急性|刺痛/;
+const promptText = 'Please describe your current pain condition.';
+const emergencyPattern = /sudden|severe|numb|weak|acute|8\/10|9\/10|剧痛|麻木|无力|突发/i;
 
 const riskTagMap = {
-  low: 'L3 绿色',
-  medium: 'L2 橙色',
-  high: 'L1 红色',
+  low: 'L3 Green',
+  medium: 'L2 Amber',
+  high: 'L1 Red',
 } as const;
 
 const communitySeed = [
-  { id: 't1', room: '术后康复', title: '今天走路 20 分钟，大家都怎么分段？', meta: '18 条新消息' },
-  { id: 't2', room: '腰背管理', title: '久坐后腰痛，有没有 3 分钟动作？', meta: '9 条新消息' },
-  { id: 't3', room: '睡眠支持', title: '夜间疼痛影响入睡，求经验', meta: '27 条新消息' },
+  { id: 't1', room: 'Post-op Rehab', title: 'How do you split a 20-minute walk?', meta: '18 new messages' },
+  { id: 't2', room: 'Back Care', title: 'Any 3-minute move for pain after sitting?', meta: '9 new messages' },
+  { id: 't3', room: 'Sleep Support', title: 'Night pain affects sleep, need advice', meta: '27 new messages' },
 ];
 
 const infoCards = [
-  { id: 'k1', tag: '今日推荐', title: '疼痛突然加重时，先做这 3 步', snippet: '先降负荷，再记录，再判断是否就医。' },
-  { id: 'k2', tag: '康复动作', title: '久坐人群：30 秒腰背解压', snippet: '坐姿也能做，动作慢一点。' },
-  { id: 'k3', tag: '家属协同', title: '如何看懂风险等级变化', snippet: '重点看连续上升，不看单次波动。' },
-  { id: 'k4', tag: '用药提醒', title: '止痛药何时需要复评', snippet: '连续依赖止痛时，建议尽快复评。' },
+  {
+    id: 'k1',
+    tag: 'Today',
+    title: '3 steps when pain spikes',
+    snippet: 'Reduce load, record pain, then decide whether to seek care.',
+  },
+  {
+    id: 'k2',
+    tag: 'Rehab',
+    title: '30-second lower-back release',
+    snippet: 'Can be done while seated, keep it slow and smooth.',
+  },
+  {
+    id: 'k3',
+    tag: 'Family',
+    title: 'How to read risk level changes',
+    snippet: 'Focus on continuous increase, not one isolated point.',
+  },
+  {
+    id: 'k4',
+    tag: 'Medication',
+    title: 'When to re-evaluate pain meds',
+    snippet: 'If dependence persists, ask for a professional review.',
+  },
+];
+
+const homeFlow: {
+  id: string;
+  title: string;
+  description: string;
+  actionLabel: string;
+  action: HomeStepAction;
+}[] = [
+  {
+    id: 'step_1',
+    title: 'Record pain first',
+    description: 'Open 2D body map and finish location + intensity capture.',
+    actionLabel: 'Start Record',
+    action: 'assessment',
+  },
+  {
+    id: 'step_2',
+    title: 'Check risk next',
+    description: 'See why the level is triggered before making decisions.',
+    actionLabel: 'Open Risk',
+    action: 'risk',
+  },
+  {
+    id: 'step_3',
+    title: 'Review weekly trend',
+    description: 'Tell a one-time fluctuation from a worsening pattern.',
+    actionLabel: 'View Trend',
+    action: 'weekly',
+  },
+  {
+    id: 'step_4',
+    title: 'Read extended guidance',
+    description: 'Keep educational cards after core actions to reduce noise.',
+    actionLabel: 'Sequence Optimized',
+    action: 'none',
+  },
 ];
 
 const inferScenario = (text: string) => {
@@ -38,7 +97,7 @@ const inferScenario = (text: string) => {
     return 'critical';
   }
 
-  if (/加重|放射|发麻|影响走路|疼得厉害|持续/.test(text)) {
+  if (/worse|radiat|numb|walking|持续|加重|放射/.test(text)) {
     return 'rising';
   }
 
@@ -47,14 +106,14 @@ const inferScenario = (text: string) => {
 
 const buildAskReply = (query: string, scenarioTitle: string) => {
   if (!query.trim()) {
-    return '请输入问题。';
+    return 'Please enter a question.';
   }
 
   if (emergencyPattern.test(query)) {
-    return '检测到高风险描述，建议立即线下就医评估。';
+    return 'High-risk keywords detected. Please seek immediate in-person medical assessment.';
   }
 
-  return `预设回答：结合你当前“${scenarioTitle}”状态，先降低活动强度，记录24小时变化，再决定是否复评。`;
+  return `Preset answer: under current scenario "${scenarioTitle}", reduce activity load first, track 24-hour change, then decide if re-check is needed.`;
 };
 
 const jumpToSection = (sectionId: string) => {
@@ -109,7 +168,7 @@ export default function App() {
         .filter((region) => selectedRegions.includes(region.id))
         .map((region) => {
           const fineCount = selectedFineRegions[region.id]?.length ?? 0;
-          return fineCount > 0 ? `${region.label} · ${fineCount}个细分` : `${region.label} · 粗粒度`;
+          return fineCount > 0 ? `${region.label} · ${fineCount} details` : `${region.label} · coarse`;
         }),
     [selectedFineRegions, selectedRegions],
   );
@@ -119,7 +178,7 @@ export default function App() {
     [selectedFineRegions],
   );
 
-  const qualityLevel =
+  const qualityLevel: QualityLevel =
     selectedRegions.length === 0
       ? 'none'
       : fineRegionCount === 0
@@ -128,11 +187,11 @@ export default function App() {
           ? 'medium'
           : 'high';
 
-  const qualityLabelMap = {
-    none: '未采集',
-    low: '粗粒度记录',
-    medium: '中等质量',
-    high: '高质量记录',
+  const qualityLabelMap: Record<QualityLevel, string> = {
+    none: 'Not captured',
+    low: 'Coarse only',
+    medium: 'Partial detail',
+    high: 'High detail',
   };
 
   const qualityScore =
@@ -143,9 +202,44 @@ export default function App() {
     return (sum / scenario.weekly.length).toFixed(1);
   }, [scenario.weekly]);
 
+  const riskToneClass = {
+    low: 'home-stat-card--safe',
+    medium: 'home-stat-card--warning',
+    high: 'home-stat-card--danger',
+  }[scenario.riskLevel];
+
+  const hasPainInput = painInput.trim().length > 0;
+  const hasNameInput = nameInput.trim().length > 0;
+  const hasCommunityInput = communityInput.trim().length > 0;
+  const hasAskInput = askInput.trim().length > 0;
+
+  const onboardDone = profileName.length > 0;
+  const canAskName = hasPainInput && (!needAssessment || !showAssessment);
+
+  const openAssessment = () => {
+    setAssessmentError('');
+    setShowAssessment(true);
+  };
+
   const goReportSection = (sectionId: string) => {
     setTab('report');
     window.setTimeout(() => jumpToSection(sectionId), 120);
+  };
+
+  const handleHomeFlowAction = (action: HomeStepAction) => {
+    if (action === 'assessment') {
+      openAssessment();
+      return;
+    }
+
+    if (action === 'risk') {
+      goReportSection('risk-section');
+      return;
+    }
+
+    if (action === 'weekly') {
+      goReportSection('weekly-section');
+    }
   };
 
   const handleSubmitPain = () => {
@@ -161,14 +255,13 @@ export default function App() {
     const shouldAssess = emergencyPattern.test(text);
     setNeedAssessment(shouldAssess);
     if (shouldAssess) {
-      setAssessmentError('');
-      setShowAssessment(true);
+      openAssessment();
     }
   };
 
   const handleFinishAssessment = () => {
     if (selectedRegions.length === 0) {
-      setAssessmentError('请先点选至少一个疼痛区域。');
+      setAssessmentError('Please select at least one pain region.');
       return;
     }
 
@@ -195,17 +288,14 @@ export default function App() {
 
     const draft = {
       id: `draft-${Date.now()}`,
-      room: '我的提问',
+      room: 'My Topic',
       title: text,
-      meta: '刚刚发布',
+      meta: 'just now',
     };
 
     setCommunityFeed((prev) => [draft, ...prev]);
     setCommunityInput('');
   };
-
-  const onboardDone = profileName.length > 0;
-  const canAskName = painInput.trim().length > 0 && (!needAssessment || !showAssessment);
 
   return (
     <div className="stream-shell">
@@ -218,11 +308,16 @@ export default function App() {
               <input
                 value={painInput}
                 onChange={(event) => setPainInput(event.target.value)}
-                placeholder="例如：右侧腰背突然刺痛，走路更疼"
-                aria-label="疼痛描述"
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    handleSubmitPain();
+                  }
+                }}
+                placeholder="Example: right lumbar sharp pain, worse while walking"
+                aria-label="Pain description"
               />
-              <button type="button" className="primary-btn" onClick={handleSubmitPain}>
-                继续
+              <button type="button" className="primary-btn" onClick={handleSubmitPain} disabled={!hasPainInput}>
+                Continue
               </button>
             </div>
 
@@ -233,19 +328,12 @@ export default function App() {
                 <p>{scenario.riskReason}</p>
                 <div className="first-feedback__actions">
                   {needAssessment ? (
-                    <button
-                      type="button"
-                      className="primary-btn"
-                      onClick={() => {
-                        setAssessmentError('');
-                        setShowAssessment(true);
-                      }}
-                    >
-                      先做 2D 评估
+                    <button type="button" className="primary-btn" onClick={openAssessment}>
+                      Run 2D Assessment
                     </button>
                   ) : (
                     <button type="button" className="ghost-btn" onClick={() => setNeedAssessment(false)}>
-                      继续建档
+                      Continue Onboarding
                     </button>
                   )}
                 </div>
@@ -254,16 +342,21 @@ export default function App() {
 
             {canAskName ? (
               <div className="intake-name-row">
-                <p>好的，我了解了您的情况。请问怎么称呼您？</p>
+                <p>How should we call you?</p>
                 <div className="intake-input-row">
                   <input
                     value={nameInput}
                     onChange={(event) => setNameInput(event.target.value)}
-                    placeholder="请输入称呼"
-                    aria-label="用户称呼"
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        handleCreateProfile();
+                      }
+                    }}
+                    placeholder="Enter your preferred name"
+                    aria-label="Preferred name"
                   />
-                  <button type="button" className="primary-btn" onClick={handleCreateProfile}>
-                    创建档案
+                  <button type="button" className="primary-btn" onClick={handleCreateProfile} disabled={!hasNameInput}>
+                    Create Profile
                   </button>
                 </div>
               </div>
@@ -274,36 +367,86 @@ export default function App() {
             <div className="mini-stage">
               {tab === 'content' ? (
                 <>
-                  <section className="mini-hero-card">
-                    <p className="mini-kicker">内容流</p>
-                    <h2 className="mini-title">{scenario.title}</h2>
-                    <p className="mini-subtitle">{scenario.subtitle}</p>
-                    <p className="mini-muted">当前重点：{scenario.riskReason}</p>
-                    <div className="mini-actions">
-                      <button
-                        type="button"
-                        className="primary-btn"
-                        onClick={() => {
-                          setAssessmentError('');
-                          setShowAssessment(true);
-                        }}
-                      >
-                        开始记录
+                  <section className="home-hero">
+                    <p className="home-hero__kicker">Primary Path</p>
+                    <h2>{scenario.title}</h2>
+                    <p className="home-hero__summary">{scenario.subtitle}</p>
+                    <p className="home-hero__focus">Current focus: {scenario.riskReason}</p>
+                    <div className="home-hero__actions">
+                      <button type="button" className="primary-btn" onClick={openAssessment}>
+                        Start Record
                       </button>
                       <button type="button" className="ghost-btn" onClick={() => setTab('report')}>
-                        查看Demo Report
+                        Open Demo Report
                       </button>
                     </div>
                   </section>
 
-                  <section className="mini-card">
-                    <h3>场景切换</h3>
-                    <div className="mini-scenario-list">
+                  <section className="home-flow-card">
+                    <div className="home-flow-card__head">
+                      <h3>Homepage Interaction Sequence</h3>
+                      <p>Do task first, then read context cards. This keeps the first screen focused.</p>
+                    </div>
+                    <ol className="home-flow-list" aria-label="Homepage steps">
+                      {homeFlow.map((step, index) => (
+                        <li key={step.id} className="home-flow-item">
+                          <span className="home-flow-index" aria-hidden="true">
+                            {index + 1}
+                          </span>
+                          <div className="home-flow-copy">
+                            <strong>{step.title}</strong>
+                            <p>{step.description}</p>
+                          </div>
+                          {step.action === 'none' ? (
+                            <span className="home-flow-action home-flow-action--text">{step.actionLabel}</span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="ghost-btn home-flow-action"
+                              onClick={() => handleHomeFlowAction(step.action)}
+                            >
+                              {step.actionLabel}
+                            </button>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  </section>
+
+                  <section className="home-stats-grid" aria-label="Today summary">
+                    <article className={`home-stat-card ${riskToneClass}`}>
+                      <span>Risk Level</span>
+                      <strong>{riskTagMap[scenario.riskLevel]}</strong>
+                      <p>{scenario.riskRuleId}</p>
+                    </article>
+                    <article className="home-stat-card">
+                      <span>Intensity</span>
+                      <strong>{intensity}/10</strong>
+                      <p>Current self-report</p>
+                    </article>
+                    <article className="home-stat-card">
+                      <span>Capture Quality</span>
+                      <strong>{qualityScore}</strong>
+                      <p>{qualityLabelMap[qualityLevel]}</p>
+                    </article>
+                    <article className="home-stat-card">
+                      <span>7-Day Avg</span>
+                      <strong>{weeklyAvg}</strong>
+                      <p>Trend baseline</p>
+                    </article>
+                  </section>
+
+                  <section className="home-scenario-card">
+                    <div>
+                      <h3>Scenario Switch</h3>
+                      <p>Switch scenario to update risk, trend, and report in one shot.</p>
+                    </div>
+                    <div className="home-scenario-list">
                       {scenarios.map((item) => (
                         <button
                           key={item.id}
                           type="button"
-                          className={item.id === scenario.id ? 'mini-scenario-btn mini-scenario-btn--active' : 'mini-scenario-btn'}
+                          className={item.id === scenario.id ? 'home-scenario-btn home-scenario-btn--active' : 'home-scenario-btn'}
                           onClick={() => setScenario(item.id)}
                         >
                           {item.title}
@@ -312,51 +455,38 @@ export default function App() {
                     </div>
                   </section>
 
-                  <section className="mini-card">
-                    <h3>今日摘要</h3>
-                    <div className="mini-bullet-row">
-                      <span>风险等级</span>
-                      <strong>{riskTagMap[scenario.riskLevel]}</strong>
-                    </div>
-                    <div className="mini-bullet-row">
-                      <span>当前强度</span>
-                      <strong>{intensity}/10</strong>
-                    </div>
-                    <div className="mini-bullet-row">
-                      <span>采集质量</span>
-                      <strong>{qualityScore}</strong>
-                    </div>
-                    <div className="mini-bullet-row">
-                      <span>7日均值</span>
-                      <strong>{weeklyAvg}</strong>
-                    </div>
+                  <section className="home-feed-grid" aria-label="Extended cards">
+                    {infoCards.map((card) => (
+                      <article className="home-feed-card" key={card.id}>
+                        <span className="home-feed-card__tag">{card.tag}</span>
+                        <h4>{card.title}</h4>
+                        <p>{card.snippet}</p>
+                      </article>
+                    ))}
                   </section>
-
-                  {infoCards.map((card) => (
-                    <article className="mini-card mini-feed-card" key={card.id}>
-                      <span className="mini-tag">{card.tag}</span>
-                      <h4>{card.title}</h4>
-                      <p>{card.snippet}</p>
-                    </article>
-                  ))}
                 </>
               ) : null}
 
               {tab === 'community' ? (
                 <>
                   <section className="mini-hero-card">
-                    <p className="mini-kicker">社群</p>
-                    <h2 className="mini-title">一起交流，互相支持</h2>
-                    <p className="mini-subtitle">提问、经验、打卡心得</p>
+                    <p className="mini-kicker">Community</p>
+                    <h2 className="mini-title">Share and support each other</h2>
+                    <p className="mini-subtitle">Questions, experience, and daily logs</p>
                     <div className="mini-post-row">
                       <input
                         value={communityInput}
                         onChange={(event) => setCommunityInput(event.target.value)}
-                        placeholder="说说你今天的情况"
-                        aria-label="社群输入"
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            handlePostCommunity();
+                          }
+                        }}
+                        placeholder="Type your update"
+                        aria-label="Community input"
                       />
-                      <button type="button" className="primary-btn" onClick={handlePostCommunity}>
-                        发布
+                      <button type="button" className="primary-btn" onClick={handlePostCommunity} disabled={!hasCommunityInput}>
+                        Post
                       </button>
                     </div>
                   </section>
@@ -377,44 +507,37 @@ export default function App() {
               {tab === 'profile' ? (
                 <>
                   <section className="mini-hero-card">
-                    <p className="mini-kicker">个人档案</p>
-                    <h2 className="mini-title">{profileName}，你好</h2>
-                    <p className="mini-subtitle">档案持续更新中</p>
+                    <p className="mini-kicker">Profile</p>
+                    <h2 className="mini-title">Hello, {profileName}</h2>
+                    <p className="mini-subtitle">Your record is continuously updated</p>
                     <div className="mini-actions">
-                      <button
-                        type="button"
-                        className="primary-btn"
-                        onClick={() => {
-                          setAssessmentError('');
-                          setShowAssessment(true);
-                        }}
-                      >
-                        记录疼痛
+                      <button type="button" className="primary-btn" onClick={openAssessment}>
+                        Record Pain
                       </button>
                       <button type="button" className="ghost-btn" onClick={() => setTab('report')}>
-                        查看Demo Report
+                        Open Demo Report
                       </button>
                     </div>
                   </section>
 
                   <section className="mini-profile-grid">
                     <article className="mini-card">
-                      <span>当前痛感</span>
+                      <span>Current pain</span>
                       <strong>{scenario.intensity} / 10</strong>
                     </article>
                     <article className="mini-card">
-                      <span>风险等级</span>
+                      <span>Risk level</span>
                       <strong>{riskTagMap[scenario.riskLevel]}</strong>
                     </article>
                     <article className="mini-card">
-                      <span>最近保存</span>
-                      <strong>{lastSavedAt ?? '未保存'}</strong>
+                      <span>Last saved</span>
+                      <strong>{lastSavedAt ?? 'Not saved yet'}</strong>
                     </article>
                   </section>
 
                   <section className="mini-card">
-                    <h3>疼痛趋势</h3>
-                    <div className="trend-bars" aria-label="疼痛趋势图">
+                    <h3>Pain Trend</h3>
+                    <div className="trend-bars" aria-label="Pain trend chart">
                       {scenario.weekly.map((item) => (
                         <div key={item.day} className="trend-bar-wrap">
                           <div className="trend-bar" style={{ height: `${24 + item.pain * 9}px` }} />
@@ -425,32 +548,33 @@ export default function App() {
                   </section>
 
                   <section className="mini-card">
-                    <h3>发作模式与用药</h3>
+                    <h3>Pattern and Medication</h3>
                     <div className="mini-bullet-row">
-                      <span>已选区域</span>
-                      <strong>{selectedRegionNames.join('、') || '未采集'}</strong>
+                      <span>Selected regions</span>
+                      <strong>{selectedRegionNames.join(', ') || 'Not captured'}</strong>
                     </div>
                     <div className="mini-bullet-row">
-                      <span>AI建议</span>
+                      <span>AI suggestion</span>
                       <strong>{scenario.reportBullets[0]}</strong>
                     </div>
                   </section>
 
                   <section className="mini-card">
-                    <h3>医学问答</h3>
+                    <h3>Medical QA</h3>
                     <div className="qa-row">
                       <input
                         value={askInput}
                         onChange={(event) => setAskInput(event.target.value)}
-                        placeholder="请输入医学问题"
-                        aria-label="医学问答输入"
+                        placeholder="Type a medical question"
+                        aria-label="Medical QA input"
                       />
                       <button
                         type="button"
                         className="primary-btn"
                         onClick={() => setAskReply(buildAskReply(askInput, scenario.title))}
+                        disabled={!hasAskInput}
                       >
-                        提问
+                        Ask
                       </button>
                     </div>
                     {askReply ? <p className="qa-reply">{askReply}</p> : null}
@@ -462,20 +586,16 @@ export default function App() {
                 <>
                   <section className="mini-hero-card report-hero">
                     <p className="mini-kicker">Demo Report</p>
-                    <h2 className="mini-title">完整演示示例与亮点展示</h2>
+                    <h2 className="mini-title">Full demo path and highlights</h2>
                     <div className="mini-actions">
                       <button type="button" className="ghost-btn" onClick={() => goReportSection('risk-section')}>
-                        跳到风险预警
+                        Jump to Risk
                       </button>
                       <button type="button" className="ghost-btn" onClick={() => goReportSection('weekly-section')}>
-                        跳到周报趋势
+                        Jump to Weekly
                       </button>
-                      <button
-                        type="button"
-                        className="ghost-btn"
-                        onClick={() => setShowDemoFlow((value) => !value)}
-                      >
-                        {showDemoFlow ? '收起链路' : '展开链路'}
+                      <button type="button" className="ghost-btn" onClick={() => setShowDemoFlow((value) => !value)}>
+                        {showDemoFlow ? 'Collapse Flow' : 'Expand Flow'}
                       </button>
                     </div>
                   </section>
@@ -494,7 +614,7 @@ export default function App() {
               ) : null}
             </div>
 
-            <footer className="mini-tabbar" aria-label="小程序风格选项卡">
+            <footer className="mini-tabbar" aria-label="Main tabs">
               <button
                 type="button"
                 className={tab === 'content' ? 'mini-tabbar-btn mini-tabbar-btn--active' : 'mini-tabbar-btn'}
@@ -528,9 +648,9 @@ export default function App() {
         )}
 
         {showAssessment ? (
-          <div className="intake-modal" role="dialog" aria-modal="true" aria-label="2D人体评估">
+          <div className="intake-modal" role="dialog" aria-modal="true" aria-label="2D body assessment">
             <div className="intake-modal__panel">
-              <h3>检测到疼痛发作，开始 2D 评估</h3>
+              <h3>Pain event detected. Start 2D assessment.</h3>
 
               <div className="side-switch">
                 <button
@@ -538,14 +658,14 @@ export default function App() {
                   className={bodySide === 'front' ? 'side-switch__btn side-switch__btn--active' : 'side-switch__btn'}
                   onClick={() => setBodySide('front')}
                 >
-                  前视
+                  Front
                 </button>
                 <button
                   type="button"
                   className={bodySide === 'back' ? 'side-switch__btn side-switch__btn--active' : 'side-switch__btn'}
                   onClick={() => setBodySide('back')}
                 >
-                  后视
+                  Back
                 </button>
               </div>
 
@@ -558,16 +678,16 @@ export default function App() {
                     style={{ left: `${region.x}%`, top: `${region.y}%` }}
                     onClick={() => activateRegion(region.id)}
                   >
-                    {region.label.length > 4 ? region.label.slice(0, 4) : region.label}
+                    {region.label.length > 8 ? region.label.slice(0, 8) : region.label}
                   </button>
                 ))}
               </div>
 
               <div className={`quality-card quality-card--${qualityLevel}`}>
-                <p className="quality-card__title">数据质量：{qualityLabelMap[qualityLevel]}</p>
-                <p className="muted">细分点位越完整，后续AI建议越稳定。</p>
+                <p className="quality-card__title">Quality: {qualityLabelMap[qualityLevel]}</p>
+                <p className="muted">More detailed points give more stable AI guidance.</p>
                 <div className="quality-score">
-                  <span>记录可信度</span>
+                  <span>Record confidence</span>
                   <strong>{qualityScore}</strong>
                 </div>
               </div>
@@ -575,7 +695,7 @@ export default function App() {
               {activeRegion ? (
                 <div className="region-detail">
                   <div className="region-detail__header">
-                    <h4>{activeRegion.label} · 细分定位</h4>
+                    <h4>{activeRegion.label} · detail points</h4>
                   </div>
                   <div className="fine-chip-wrap">
                     {activeRegion.fineRegions.map((fine) => {
@@ -596,7 +716,7 @@ export default function App() {
               ) : null}
 
               <div className="compact-meter">
-                <label htmlFor="quick-intensity">强度 {intensity}/10</label>
+                <label htmlFor="quick-intensity">Intensity {intensity}/10</label>
                 <input
                   id="quick-intensity"
                   type="range"
@@ -611,10 +731,10 @@ export default function App() {
 
               <div className="intake-modal__actions">
                 <button type="button" className="ghost-btn" onClick={() => setShowAssessment(false)}>
-                  稍后再评估
+                  Later
                 </button>
                 <button type="button" className="primary-btn" onClick={handleFinishAssessment}>
-                  完成采集
+                  Save Capture
                 </button>
               </div>
             </div>

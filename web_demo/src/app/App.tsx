@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { AIExtractPanel } from '../features/ai-extract/AIExtractPanel';
 import { AskRagPanel } from '../features/ask-rag/AskRagPanel';
@@ -14,6 +14,13 @@ type HomeStepAction = 'assessment' | 'risk' | 'weekly' | 'none';
 type QualityLevel = 'none' | 'low' | 'medium' | 'high';
 type IntakeStep = 'name' | 'pain';
 type ReportPage = 'sample' | 'showcase';
+type ShowcaseSectionId =
+  | 'showcase-capture-section'
+  | 'showcase-extract-section'
+  | 'showcase-risk-section'
+  | 'showcase-weekly-section'
+  | 'showcase-ask-section'
+  | 'showcase-family-section';
 
 interface PainSampleReport {
   generatedAt: string;
@@ -36,6 +43,15 @@ const riskTagMap = {
   medium: 'L2 橙色',
   high: 'L1 红色',
 } as const;
+
+const showcaseSectionMeta: { id: ShowcaseSectionId; index: string; label: string }[] = [
+  { id: 'showcase-capture-section', index: '01', label: '采集' },
+  { id: 'showcase-extract-section', index: '02', label: '抽取' },
+  { id: 'showcase-risk-section', index: '03', label: '预警' },
+  { id: 'showcase-weekly-section', index: '04', label: '周报' },
+  { id: 'showcase-ask-section', index: '05', label: '问答' },
+  { id: 'showcase-family-section', index: '06', label: '家属协同' },
+];
 
 const communitySeed = [
   { id: 't1', room: '术后康复', title: '今天走路 20 分钟，大家都怎么分段？', meta: '18 条新消息' },
@@ -166,11 +182,15 @@ export default function App() {
   const [tab, setTab] = useState<WorkspaceTab>('content');
   const [reportPage, setReportPage] = useState<ReportPage>('sample');
   const [activeActionId, setActiveActionId] = useState('');
+  const [activeShowcaseSection, setActiveShowcaseSection] =
+    useState<ShowcaseSectionId>('showcase-capture-section');
+  const [showcaseDemoSection, setShowcaseDemoSection] = useState<ShowcaseSectionId | ''>('');
   const [sampleReport, setSampleReport] = useState<PainSampleReport | null>(null);
   const [askInput, setAskInput] = useState('');
   const [askReply, setAskReply] = useState('');
   const [communityInput, setCommunityInput] = useState('');
   const [communityFeed, setCommunityFeed] = useState(communitySeed);
+  const showcaseDeckRef = useRef<HTMLElement | null>(null);
 
   const scenario = useMemo(() => scenarios.find((item) => item.id === scenarioId) ?? scenarios[0], [scenarioId]);
 
@@ -239,7 +259,7 @@ export default function App() {
     setShowAssessment(true);
   };
 
-  const goReportSection = (sectionId: string) => {
+  const goReportSection = (sectionId: ShowcaseSectionId) => {
     setTab('report');
     setReportPage('showcase');
     window.setTimeout(() => jumpToSection(sectionId), 220);
@@ -251,6 +271,39 @@ export default function App() {
     window.setTimeout(() => setActiveActionId(''), 760);
   };
 
+  const scrollToShowcaseSection = (sectionId: ShowcaseSectionId) => {
+    const target = document.getElementById(sectionId);
+    if (!target) {
+      return;
+    }
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setActiveShowcaseSection(sectionId);
+  };
+
+  const runShowcaseDemo = (sectionId: ShowcaseSectionId, actionId: string, next?: () => void) => {
+    setShowcaseDemoSection(sectionId);
+    playActionFx(actionId, () => {
+      scrollToShowcaseSection(sectionId);
+      next?.();
+    });
+
+    window.setTimeout(() => setShowcaseDemoSection(''), 960);
+  };
+
+  const getShowcasePageClassName = (sectionId: ShowcaseSectionId, toneClassName: string) =>
+    [
+      'immersive-scroll-page',
+      toneClassName,
+      activeShowcaseSection === sectionId ? 'immersive-scroll-page--active' : '',
+      showcaseDemoSection === sectionId ? 'immersive-scroll-page--demo' : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
+
+  const getShowcaseHudClassName = (sectionId: ShowcaseSectionId) =>
+    showcaseDemoSection === sectionId ? 'immersive-stage-hud immersive-stage-hud--active' : 'immersive-stage-hud';
+
   const handleHomeFlowAction = (action: HomeStepAction) => {
     if (action === 'assessment') {
       openAssessment();
@@ -258,12 +311,12 @@ export default function App() {
     }
 
     if (action === 'risk') {
-      goReportSection('risk-section');
+      goReportSection('showcase-risk-section');
       return;
     }
 
     if (action === 'weekly') {
-      goReportSection('weekly-section');
+      goReportSection('showcase-weekly-section');
     }
   };
 
@@ -370,6 +423,47 @@ export default function App() {
 
     setSampleReport(report);
   };
+
+  useEffect(() => {
+    if (reportPage !== 'showcase') {
+      return;
+    }
+
+    const deck = showcaseDeckRef.current;
+    if (!deck) {
+      return;
+    }
+
+    const pages = Array.from(deck.querySelectorAll<HTMLElement>('.immersive-scroll-page'));
+    if (pages.length === 0) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const dominantEntry = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+
+        if (!dominantEntry) {
+          return;
+        }
+
+        const sectionId = dominantEntry.target.id as ShowcaseSectionId;
+        if (sectionId) {
+          setActiveShowcaseSection(sectionId);
+        }
+      },
+      {
+        root: deck,
+        threshold: [0.35, 0.55, 0.72],
+      },
+    );
+
+    pages.forEach((page) => observer.observe(page));
+
+    return () => observer.disconnect();
+  }, [reportPage]);
 
   return (
     <div className="stream-shell">
@@ -777,10 +871,29 @@ export default function App() {
                           <p className="immersive-kicker">SoothPal 沉浸式产品介绍</p>
                           <h3>一镜到底讲清「采集-分析-预警-协同」的完整闭环</h3>
                           <p>
-                            这一页不是传统功能堆叠，而是像成熟产品官网一样，
-                            用逐屏叙事让观众顺着价值链沉浸式看完全流程。
-                            每个按钮都可点击并带反馈动效，交互会有明确“响应感”。
+                            这页保持演示报告原有结构，但升级为“逐屏沉浸式叙事”。
+                            每一屏进入时会自动播放建构动画，按钮可触发对应功能演示并给出动态反馈。
                           </p>
+
+                          <div className="immersive-story-nav" role="tablist" aria-label="动态演示分屏导航">
+                            {showcaseSectionMeta.map((item) => (
+                              <button
+                                key={item.id}
+                                type="button"
+                                className={
+                                  activeShowcaseSection === item.id
+                                    ? 'immersive-story-nav__btn immersive-story-nav__btn--active'
+                                    : 'immersive-story-nav__btn'
+                                }
+                                onClick={() => scrollToShowcaseSection(item.id)}
+                                aria-selected={activeShowcaseSection === item.id}
+                              >
+                                <span>{item.index}</span>
+                                <strong>{item.label}</strong>
+                              </button>
+                            ))}
+                          </div>
+
                           <div className="showcase-actions">
                             <button
                               type="button"
@@ -792,15 +905,18 @@ export default function App() {
                             <button
                               type="button"
                               className={`ghost-btn immersive-action-btn ${activeActionId === 'to-risk' ? 'immersive-action-btn--active' : ''}`}
-                              onClick={() => playActionFx('to-risk', () => jumpToSection('risk-section'))}
+                              onClick={() => runShowcaseDemo('showcase-risk-section', 'to-risk')}
                             >
                               直达风险预警分屏
                             </button>
                           </div>
                         </article>
 
-                        <section className="immersive-scroll-deck" aria-label="沉浸式产品滚动分屏">
-                          <article id="capture-section" className="immersive-scroll-page immersive-scroll-page--capture">
+                        <section className="immersive-scroll-deck" aria-label="沉浸式产品滚动分屏" ref={showcaseDeckRef}>
+                          <article
+                            id="showcase-capture-section"
+                            className={getShowcasePageClassName('showcase-capture-section', 'immersive-scroll-page--capture')}
+                          >
                             <header className="immersive-scroll-page__head">
                               <span>01 / 零门槛采集</span>
                               <h4>两步完成疼痛描述，降低填写摩擦</h4>
@@ -809,18 +925,26 @@ export default function App() {
                                 <button
                                   type="button"
                                   className={`ghost-btn immersive-action-btn ${activeActionId === 'capture-assess' ? 'immersive-action-btn--active' : ''}`}
-                                  onClick={() => playActionFx('capture-assess', openAssessment)}
+                                  onClick={() => runShowcaseDemo('showcase-capture-section', 'capture-assess', openAssessment)}
                                 >
                                   现场触发 2D 评估弹窗
                                 </button>
                               </div>
+                              <p className={getShowcaseHudClassName('showcase-capture-section')}>
+                                {showcaseDemoSection === 'showcase-capture-section'
+                                  ? '演示动作已触发，正在联动采集模块…'
+                                  : '进入本屏会自动播放建构动画'}
+                              </p>
                             </header>
                             <div className="immersive-scroll-page__body">
                               <PainCapturePanel />
                             </div>
                           </article>
 
-                          <article className="immersive-scroll-page immersive-scroll-page--extract">
+                          <article
+                            id="showcase-extract-section"
+                            className={getShowcasePageClassName('showcase-extract-section', 'immersive-scroll-page--extract')}
+                          >
                             <header className="immersive-scroll-page__head">
                               <span>02 / AI 结构化</span>
                               <h4>把自然语言自动转换成可计算字段</h4>
@@ -829,18 +953,26 @@ export default function App() {
                                 <button
                                   type="button"
                                   className={`ghost-btn immersive-action-btn ${activeActionId === 'extract-ask' ? 'immersive-action-btn--active' : ''}`}
-                                  onClick={() => playActionFx('extract-ask', () => jumpToSection('ask-section'))}
+                                  onClick={() => runShowcaseDemo('showcase-ask-section', 'extract-ask')}
                                 >
                                   查看后续问答联动
                                 </button>
                               </div>
+                              <p className={getShowcaseHudClassName('showcase-extract-section')}>
+                                {showcaseDemoSection === 'showcase-extract-section'
+                                  ? '演示动作已触发，正在联动 AI 抽取模块…'
+                                  : '进入本屏会自动播放建构动画'}
+                              </p>
                             </header>
                             <div className="immersive-scroll-page__body">
                               <AIExtractPanel />
                             </div>
                           </article>
 
-                          <article id="risk-section" className="immersive-scroll-page immersive-scroll-page--risk">
+                          <article
+                            id="showcase-risk-section"
+                            className={getShowcasePageClassName('showcase-risk-section', 'immersive-scroll-page--risk')}
+                          >
                             <header className="immersive-scroll-page__head">
                               <span>03 / 风险预警</span>
                               <h4>规则引擎给出可解释风险等级与行动建议</h4>
@@ -850,7 +982,7 @@ export default function App() {
                                   type="button"
                                   className={`ghost-btn immersive-action-btn ${activeActionId === 'risk-sample' ? 'immersive-action-btn--active' : ''}`}
                                   onClick={() =>
-                                    playActionFx('risk-sample', () => {
+                                    runShowcaseDemo('showcase-risk-section', 'risk-sample', () => {
                                       handleGenerateSampleReport();
                                       setReportPage('sample');
                                     })
@@ -859,13 +991,21 @@ export default function App() {
                                   一键生成对应样例报告
                                 </button>
                               </div>
+                              <p className={getShowcaseHudClassName('showcase-risk-section')}>
+                                {showcaseDemoSection === 'showcase-risk-section'
+                                  ? '演示动作已触发，正在联动风险引擎…'
+                                  : '进入本屏会自动播放建构动画'}
+                              </p>
                             </header>
                             <div className="immersive-scroll-page__body">
                               <RiskAlertPanel />
                             </div>
                           </article>
 
-                          <article id="weekly-section" className="immersive-scroll-page immersive-scroll-page--weekly">
+                          <article
+                            id="showcase-weekly-section"
+                            className={getShowcasePageClassName('showcase-weekly-section', 'immersive-scroll-page--weekly')}
+                          >
                             <header className="immersive-scroll-page__head">
                               <span>04 / 周报洞察</span>
                               <h4>把多维波动压缩成一页可读趋势</h4>
@@ -874,18 +1014,26 @@ export default function App() {
                                 <button
                                   type="button"
                                   className={`ghost-btn immersive-action-btn ${activeActionId === 'weekly-family' ? 'immersive-action-btn--active' : ''}`}
-                                  onClick={() => playActionFx('weekly-family', () => jumpToSection('family-section'))}
+                                  onClick={() => runShowcaseDemo('showcase-family-section', 'weekly-family')}
                                 >
                                   跳转到家属协同分屏
                                 </button>
                               </div>
+                              <p className={getShowcaseHudClassName('showcase-weekly-section')}>
+                                {showcaseDemoSection === 'showcase-weekly-section'
+                                  ? '演示动作已触发，正在联动周报模块…'
+                                  : '进入本屏会自动播放建构动画'}
+                              </p>
                             </header>
                             <div className="immersive-scroll-page__body">
                               <WeeklyReportPanel />
                             </div>
                           </article>
 
-                          <article id="ask-section" className="immersive-scroll-page immersive-scroll-page--ask">
+                          <article
+                            id="showcase-ask-section"
+                            className={getShowcasePageClassName('showcase-ask-section', 'immersive-scroll-page--ask')}
+                          >
                             <header className="immersive-scroll-page__head">
                               <span>05 / 安全问答</span>
                               <h4>RAG 回答不仅给结论，还给依据与边界</h4>
@@ -894,18 +1042,26 @@ export default function App() {
                                 <button
                                   type="button"
                                   className={`ghost-btn immersive-action-btn ${activeActionId === 'ask-top' ? 'immersive-action-btn--active' : ''}`}
-                                  onClick={() => playActionFx('ask-top', () => jumpToSection('capture-section'))}
+                                  onClick={() => runShowcaseDemo('showcase-capture-section', 'ask-top')}
                                 >
                                   回到采集起点分屏
                                 </button>
                               </div>
+                              <p className={getShowcaseHudClassName('showcase-ask-section')}>
+                                {showcaseDemoSection === 'showcase-ask-section'
+                                  ? '演示动作已触发，正在联动 RAG 模块…'
+                                  : '进入本屏会自动播放建构动画'}
+                              </p>
                             </header>
                             <div className="immersive-scroll-page__body">
                               <AskRagPanel />
                             </div>
                           </article>
 
-                          <article id="family-section" className="immersive-scroll-page immersive-scroll-page--family">
+                          <article
+                            id="showcase-family-section"
+                            className={getShowcasePageClassName('showcase-family-section', 'immersive-scroll-page--family')}
+                          >
                             <header className="immersive-scroll-page__head">
                               <span>06 / 家属协同</span>
                               <h4>最小必要信息共享，形成陪伴闭环</h4>
@@ -914,11 +1070,18 @@ export default function App() {
                                 <button
                                   type="button"
                                   className={`ghost-btn immersive-action-btn ${activeActionId === 'family-sample' ? 'immersive-action-btn--active' : ''}`}
-                                  onClick={() => playActionFx('family-sample', () => setReportPage('sample'))}
+                                  onClick={() =>
+                                    runShowcaseDemo('showcase-family-section', 'family-sample', () => setReportPage('sample'))
+                                  }
                                 >
                                   返回样例报告页收尾
                                 </button>
                               </div>
+                              <p className={getShowcaseHudClassName('showcase-family-section')}>
+                                {showcaseDemoSection === 'showcase-family-section'
+                                  ? '演示动作已触发，正在联动家属协同模块…'
+                                  : '进入本屏会自动播放建构动画'}
+                              </p>
                             </header>
                             <div className="immersive-scroll-page__body">
                               <FamilyPanel />

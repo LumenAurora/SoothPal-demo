@@ -1,0 +1,42 @@
+{
+  "pages": [
+    "pages/home/index",
+    "pages/content/index",
+    "pages/community/index",
+    "pages/profile/index",
+    "pages/record/index",
+    "pages/dashboard/index",
+    "pages/alerts/index",
+    "pages/family/index",
+    "pages/ask/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "SoothPal 小程序原型",
+    "navigationBarBackgroundColor": "#f4f8ff",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#eef5ff",
+    "backgroundTextStyle": "light"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "tabBar": {
+    "color": "#55719a",
+    "selectedColor": "#1f67df",
+    "backgroundColor": "#f4f8ff",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/content/index",
+        "text": "内容"
+      },
+      {
+        "pagePath": "pages/community/index",
+        "text": "社群"
+      },
+      {
+        "pagePath": "pages/profile/index",
+        "text": "个人+问答"
+      }
+    ]
+  }
+}

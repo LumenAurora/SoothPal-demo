@@ -1,0 +1,82 @@
+<view class="page-shell">
+  <view class="hero-card">
+    <text class="kicker">个人档案</text>
+    <view class="title">{{profileName}}，你好</view>
+    <view class="subtitle">档案持续更新中</view>
+    <view class="hero-actions">
+      <button class="btn btn-primary" bindtap="goRecord">记录疼痛</button>
+      <button class="btn" bindtap="goDashboard">查看趋势</button>
+    </view>
+  </view>
+
+  <view class="profile-grid">
+    <view class="card metric-card">
+      <text class="metric-label">当前痛感</text>
+      <text class="metric-value">{{latestPain}} / 10</text>
+    </view>
+    <view class="card metric-card">
+      <text class="metric-label">风险等级</text>
+      <text class="metric-value">{{latestAlertLabel}}</text>
+    </view>
+    <view class="card metric-card">
+      <text class="metric-label">最近保存</text>
+      <text class="metric-value">{{lastSavedAt}}</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">疼痛趋势</view>
+    <view class="trend-row">
+      <block wx:for="{{weekly}}" wx:key="day">
+        <view class="bar-wrap">
+          <view class="bar" style="height:{{item.height}}rpx;"></view>
+          <text class="bar-pain">{{item.pain}}</text>
+          <text class="bar-day">{{item.day}}</text>
+        </view>
+      </block>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">发作模式与用药</view>
+    <view class="fact-row">
+      <text class="fact-key">发作提示</text>
+      <text class="fact-value">{{latestAlertReason}}</text>
+    </view>
+    <view class="fact-row">
+      <text class="fact-key">用药情况</text>
+      <text class="fact-value">{{medication}}</text>
+    </view>
+    <view class="fact-row">
+      <text class="fact-key">睡眠影响</text>
+      <text class="fact-value">{{sleep}}</text>
+    </view>
+    <view class="fact-row">
+      <text class="fact-key">AI建议</text>
+      <text class="fact-value">{{advice}}</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">医学问答</view>
+    <view class="ask-row">
+      <input
+        class="ask-input"
+        value="{{askQuery}}"
+        bindinput="onAskInput"
+        placeholder="请输入医学问题"
+        placeholder-style="color:#7f93b0;"
+      />
+      <button class="btn btn-primary" bindtap="onAskSubmit">提问</button>
+    </view>
+
+    <view class="ask-result {{askResult && askResult.isHighRisk ? 'high-risk' : ''}}" wx:if="{{askResult}}">
+      <text class="ask-answer">{{askResult.answer}}</text>
+      <view class="citation-list" wx:if="{{askResult.citations.length}}">
+        <block wx:for="{{askResult.citations}}" wx:key="*this">
+          <text class="tag">{{item}}</text>
+        </block>
+      </view>
+    </view>
+  </view>
+</view>

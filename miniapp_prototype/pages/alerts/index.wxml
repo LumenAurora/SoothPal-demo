@@ -1,0 +1,32 @@
+<view class="page-shell">
+  <view class="card">
+    <text class="kicker">风险监测中心</text>
+    <view class="title">分级风险预警</view>
+    <view class="subtitle">规则先判断，AI负责解释和提醒，不替代医学诊断。</view>
+    <view class="row" style="margin-top: 12rpx;">
+      <text class="muted">触发依据清晰可见，便于家属和医生沟通</text>
+      <button class="btn btn-small" bindtap="onSimulateNoRecord">模拟3天未记录</button>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{!alerts.length}}">
+    <view class="section-title">当前暂无预警</view>
+    <text class="muted">继续完成每日记录，系统会持续监测趋势变化。</text>
+  </view>
+
+  <block wx:for="{{alerts}}" wx:key="id">
+    <view class="card {{item.tone}}">
+      <view class="row">
+        <view class="section-title">{{item.levelLabel}}</view>
+        <text class="muted">{{item.createdAt}}</text>
+      </view>
+      <text class="muted">触发来源：{{item.source}}</text>
+      <block wx:for="{{item.reasons}}" wx:key="*this">
+        <view class="reason-row">
+          <text class="reason-dot">•</text>
+          <text class="reason-text">{{item}}</text>
+        </view>
+      </block>
+    </view>
+  </block>
+</view>

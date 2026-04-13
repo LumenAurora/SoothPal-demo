@@ -1,0 +1,39 @@
+<view class="page-shell">
+  <view class="hero-card">
+    <text class="kicker">内容流</text>
+    <view class="title">{{scenarioTitle}}</view>
+    <view class="subtitle">{{scenarioSubtitle}}</view>
+    <view class="muted">当前重点：{{riskHint}}</view>
+    <view class="hero-actions">
+      <button class="btn btn-primary" bindtap="goRecord">开始记录</button>
+      <button class="btn" bindtap="goDashboard">查看趋势</button>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">场景切换</view>
+    <view class="scenario-list">
+      <block wx:for="{{scenarios}}" wx:key="id">
+        <button class="btn btn-small scenario-btn" data-id="{{item.id}}" bindtap="onLoadScenario">{{item.title}}</button>
+      </block>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{reportBullets.length}}">
+    <view class="section-title">今日摘要</view>
+    <block wx:for="{{reportBullets}}" wx:key="*this">
+      <view class="bullet-row">
+        <text class="bullet-dot">•</text>
+        <text class="muted">{{item}}</text>
+      </view>
+    </block>
+  </view>
+
+  <block wx:for="{{feedCards}}" wx:key="id">
+    <view class="card feed-card">
+      <text class="tag">{{item.tag}}</text>
+      <view class="feed-title">{{item.title}}</view>
+      <text class="muted">{{item.snippet}}</text>
+    </view>
+  </block>
+</view>

@@ -1,0 +1,44 @@
+<view class="page-shell">
+  <view class="card">
+    <text class="kicker">趋势周报</text>
+    <view class="title">趋势仪表盘</view>
+    <view class="subtitle">{{scenarioTitle}} · {{scenarioSubtitle}}</view>
+    <view class="muted">近 7 日平均痛感：{{avgPain}}</view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">近 7 天疼痛趋势</view>
+    <view class="chart-row">
+      <block wx:for="{{weekly}}" wx:key="day">
+        <view class="bar-group">
+          <view class="bar pain" style="height: {{item.painHeight}}rpx;"></view>
+          <text class="bar-value">{{item.pain}}</text>
+          <text class="bar-label">{{item.day}}</text>
+        </view>
+      </block>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">近 7 天步数趋势</view>
+    <view class="chart-row">
+      <block wx:for="{{weekly}}" wx:key="day">
+        <view class="bar-group">
+          <view class="bar steps" style="height: {{item.stepsHeight}}rpx;"></view>
+          <text class="bar-value">{{item.steps}}</text>
+          <text class="bar-label">{{item.day}}</text>
+        </view>
+      </block>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">AI 周报摘要</view>
+    <block wx:for="{{reportBullets}}" wx:key="*this">
+      <view class="bullet-item">
+        <text class="bullet-dot">•</text>
+        <text class="muted bullet-text">{{item}}</text>
+      </view>
+    </block>
+  </view>
+</view>

@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+_tmp_preview_build/
+slide_preview_new/
+slide_preview_old/
+slide_preview_v3_round1/
+slide_preview_v3_round2/
+slide_preview_v3_round3/
+
+web_demo/node_modules/
+web_demo/dist/
+web_demo/.vite/
+miniapp_prototype/node_modules/
+
+.playwright-mcp/
+*.log
+~$*.pptx

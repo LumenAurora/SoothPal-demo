@@ -165,7 +165,6 @@ export default function App() {
   const [submittedPain, setSubmittedPain] = useState(false);
   const [tab, setTab] = useState<WorkspaceTab>('content');
   const [reportPage, setReportPage] = useState<ReportPage>('sample');
-  const [showDemoFlow, setShowDemoFlow] = useState(false);
   const [sampleReport, setSampleReport] = useState<PainSampleReport | null>(null);
   const [askInput, setAskInput] = useState('');
   const [askReply, setAskReply] = useState('');
@@ -241,9 +240,8 @@ export default function App() {
 
   const goReportSection = (sectionId: string) => {
     setTab('report');
-    setReportPage('sample');
-    setShowDemoFlow(true);
-    window.setTimeout(() => jumpToSection(sectionId), 120);
+    setReportPage('showcase');
+    window.setTimeout(() => jumpToSection(sectionId), 220);
   };
 
   const handleHomeFlowAction = (action: HomeStepAction) => {
@@ -705,9 +703,6 @@ export default function App() {
                             <button type="button" className="primary-btn" onClick={handleGenerateSampleReport}>
                               生成疼痛样例报告
                             </button>
-                            <button type="button" className="ghost-btn" onClick={() => setShowDemoFlow((value) => !value)}>
-                              {showDemoFlow ? '收起技术链路' : '展开技术链路'}
-                            </button>
                           </div>
                         </article>
 
@@ -765,78 +760,94 @@ export default function App() {
                         ) : (
                           <article className="report-sheet report-sheet--placeholder">
                             <h3>等待生成样例报告</h3>
-                            <p>点击上方按钮后，将自动填充风险、趋势与建议内容，适合答辩现场演示。</p>
+                            <p>点击上方按钮后，将自动填充风险、趋势与建议内容，可直接用于产品展示。</p>
                           </article>
                         )}
-
-                        {showDemoFlow ? (
-                          <section className="report-flow-shell">
-                            <PainCapturePanel />
-                            <AIExtractPanel />
-                            <RiskAlertPanel />
-                            <WeeklyReportPanel />
-                            <AskRagPanel />
-                            <FamilyPanel />
-                          </section>
-                        ) : null}
                       </section>
                     ) : (
                       <section className="showcase-shell" key="showcase-page">
                         <article className="showcase-hero-card">
                           <p className="showcase-kicker">SoothPal 动态演示</p>
-                          <h3>让评委看到“产品级体验”的动态演示主页</h3>
+                          <h3>动态演示页：滚动分屏展示完整价值链</h3>
                           <p>
-                            从零负担采集到风险预警，再到家属协同，页面会用连续动效讲完整个价值链，
-                            更像成熟产品发布页，而不是静态功能堆叠。
+                            我们把原有链路重构为逐页滚动的动态展示：
+                            从采集、抽取、预警、周报到问答与家属协同，
+                            每一屏只讲一个关键价值点，整体观感更接近产品官网叙事体验。
                           </p>
                           <div className="showcase-actions">
                             <button type="button" className="primary-btn" onClick={() => setReportPage('sample')}>
                               去生成样例报告
                             </button>
-                            <button type="button" className="ghost-btn" onClick={() => goReportSection('risk-section')}>
-                              直达风险链路
+                            <button type="button" className="ghost-btn" onClick={() => setReportPage('sample')}>
+                              返回样例报告页
                             </button>
                           </div>
                         </article>
 
-                        <section className="showcase-feature-grid">
-                          <article className="showcase-feature-card">
-                            <span>10 秒采集</span>
-                            <strong>2D 人体涂抹 + NRS</strong>
-                            <p>用户像点地图一样完成部位和强度上报，采集路径极短。</p>
+                        <section className="showcase-scroll-deck" aria-label="动态演示滚动分屏">
+                          <article className="showcase-scroll-page showcase-scroll-page--capture">
+                            <header className="showcase-scroll-page__head">
+                              <span>01 / 零负担采集</span>
+                              <h4>我们用 2D 人体交互替代冗长问卷</h4>
+                              <p>让用户以最低认知负担完成疼痛部位与强度上报。</p>
+                            </header>
+                            <div className="showcase-scroll-page__body">
+                              <PainCapturePanel />
+                            </div>
                           </article>
-                          <article className="showcase-feature-card">
-                            <span>可解释 AI</span>
-                            <strong>RAG + 引用 + 护栏</strong>
-                            <p>每次问答给出引用来源，命中红旗征象时优先就医建议。</p>
-                          </article>
-                          <article className="showcase-feature-card">
-                            <span>风险闭环</span>
-                            <strong>L1/L2/L3 分级联动</strong>
-                            <p>患者端、家属端、报告端同步响应，形成完整管理闭环。</p>
-                          </article>
-                        </section>
 
-                        <section className="showcase-timeline">
-                          <article className="showcase-timeline-item">
-                            <i>01</i>
-                            <div>
-                              <h4>称呼建档</h4>
-                              <p>先建立关系感，再进行症状采集。</p>
+                          <article className="showcase-scroll-page showcase-scroll-page--extract">
+                            <header className="showcase-scroll-page__head">
+                              <span>02 / AI 结构化</span>
+                              <h4>我们把自然语言自动提炼为结构化指标</h4>
+                              <p>保留原始语义，同时生成可计算、可追踪的数据字段。</p>
+                            </header>
+                            <div className="showcase-scroll-page__body">
+                              <AIExtractPanel />
                             </div>
                           </article>
-                          <article className="showcase-timeline-item">
-                            <i>02</i>
-                            <div>
-                              <h4>疼痛录入</h4>
-                              <p>部位、强度、语音结构化一步完成。</p>
+
+                          <article className="showcase-scroll-page showcase-scroll-page--risk">
+                            <header className="showcase-scroll-page__head">
+                              <span>03 / 风险分级</span>
+                              <h4>我们输出可解释、可审计的分级预警</h4>
+                              <p>风险结论由规则引擎产生，AI 负责解释与行动建议。</p>
+                            </header>
+                            <div className="showcase-scroll-page__body">
+                              <RiskAlertPanel />
                             </div>
                           </article>
-                          <article className="showcase-timeline-item">
-                            <i>03</i>
-                            <div>
-                              <h4>报告输出</h4>
-                              <p>自动生成趋势摘要与干预建议，便于答辩展示。</p>
+
+                          <article className="showcase-scroll-page showcase-scroll-page--weekly">
+                            <header className="showcase-scroll-page__head">
+                              <span>04 / 周报生成</span>
+                              <h4>我们把复杂趋势压缩为一页可读摘要</h4>
+                              <p>让患者、家属和服务团队在同一视图快速达成共识。</p>
+                            </header>
+                            <div className="showcase-scroll-page__body">
+                              <WeeklyReportPanel />
+                            </div>
+                          </article>
+
+                          <article className="showcase-scroll-page showcase-scroll-page--ask">
+                            <header className="showcase-scroll-page__head">
+                              <span>05 / RAG 问答</span>
+                              <h4>我们提供带引用与护栏的个体化问答</h4>
+                              <p>在可解释前提下提高回答质量，并对高危问题优先就医引导。</p>
+                            </header>
+                            <div className="showcase-scroll-page__body">
+                              <AskRagPanel />
+                            </div>
+                          </article>
+
+                          <article className="showcase-scroll-page showcase-scroll-page--family">
+                            <header className="showcase-scroll-page__head">
+                              <span>06 / 亲情协同</span>
+                              <h4>我们用最小必要信息完成家属协同闭环</h4>
+                              <p>共享趋势与预警，不暴露多余隐私字段。</p>
+                            </header>
+                            <div className="showcase-scroll-page__body">
+                              <FamilyPanel />
                             </div>
                           </article>
                         </section>

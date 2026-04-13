@@ -13,6 +13,20 @@ type WorkspaceTab = 'content' | 'community' | 'profile' | 'report';
 type HomeStepAction = 'assessment' | 'risk' | 'weekly' | 'none';
 type QualityLevel = 'none' | 'low' | 'medium' | 'high';
 type IntakeStep = 'name' | 'pain';
+type ReportPage = 'sample' | 'showcase';
+
+interface PainSampleReport {
+  generatedAt: string;
+  patientName: string;
+  scenarioTitle: string;
+  riskLabel: string;
+  avgPain: string;
+  peakPain: number;
+  keyRegion: string;
+  trend: string;
+  findings: string[];
+  actions: string[];
+}
 
 const promptText = '您好，请先告诉我怎么称呼您。';
 const emergencyPattern = /sudden|severe|numb|weak|acute|8\/10|9\/10|剧痛|麻木|无力|突发|急性/i;
@@ -88,7 +102,7 @@ const homeFlow: {
     id: 'step_4',
     title: '最后看延伸内容',
     description: '信息流后置，避免第一屏分散注意力。',
-    actionLabel: '顺序已优化',
+    actionLabel: '查看延伸内容',
     action: 'none',
   },
 ];
@@ -150,7 +164,9 @@ export default function App() {
   const [assessmentError, setAssessmentError] = useState('');
   const [submittedPain, setSubmittedPain] = useState(false);
   const [tab, setTab] = useState<WorkspaceTab>('content');
-  const [showDemoFlow, setShowDemoFlow] = useState(true);
+  const [reportPage, setReportPage] = useState<ReportPage>('sample');
+  const [showDemoFlow, setShowDemoFlow] = useState(false);
+  const [sampleReport, setSampleReport] = useState<PainSampleReport | null>(null);
   const [askInput, setAskInput] = useState('');
   const [askReply, setAskReply] = useState('');
   const [communityInput, setCommunityInput] = useState('');
@@ -225,6 +241,8 @@ export default function App() {
 
   const goReportSection = (sectionId: string) => {
     setTab('report');
+    setReportPage('sample');
+    setShowDemoFlow(true);
     window.setTimeout(() => jumpToSection(sectionId), 120);
   };
 
@@ -308,6 +326,44 @@ export default function App() {
 
     setCommunityFeed((prev) => [draft, ...prev]);
     setCommunityInput('');
+  };
+
+  const handleGenerateSampleReport = () => {
+    const painPoints = scenario.weekly.map((item) => item.pain);
+    const firstPain = painPoints[0] ?? intensity;
+    const latestPain = painPoints[painPoints.length - 1] ?? intensity;
+    const delta = latestPain - firstPain;
+    const trend =
+      delta >= 1
+        ? `近7天疼痛整体上升 ${delta.toFixed(1)} 分，需要重点观察。`
+        : delta <= -1
+          ? `近7天疼痛整体下降 ${Math.abs(delta).toFixed(1)} 分，趋势向好。`
+          : '近7天疼痛总体平稳，建议继续连续记录。';
+
+    const report: PainSampleReport = {
+      generatedAt: new Date().toLocaleString('zh-CN', { hour12: false }),
+      patientName: profileName || displayName,
+      scenarioTitle: scenario.title,
+      riskLabel: riskTagMap[scenario.riskLevel],
+      avgPain: weeklyAvg,
+      peakPain: painPoints.length > 0 ? Math.max(...painPoints) : intensity,
+      keyRegion: selectedRegionNames[0] ?? '腰背（待补充细分）',
+      trend,
+      findings: [
+        scenario.riskReason,
+        scenario.reportBullets[0] ?? '当前数据不足，建议先补充连续记录。',
+        `本次记录：强度 ${intensity}/10；区域：${selectedRegionNames.join('、') || '未采集'}。`,
+      ],
+      actions: [
+        scenario.riskLevel === 'high' || needAssessment
+          ? '优先完成 2D 细分评估，并准备线下复诊材料。'
+          : '保持当前康复方案，连续记录 7 天后复评。',
+        '家属端重点关注连续上升与失访提醒。',
+        '出现突发剧痛、麻木无力等红旗征象时立即就医。',
+      ],
+    };
+
+    setSampleReport(report);
   };
 
   return (
@@ -612,32 +668,181 @@ export default function App() {
 
               {tab === 'report' ? (
                 <>
-                  <section className="mini-hero-card report-hero">
-                    <p className="mini-kicker">演示报告</p>
-                    <h2 className="mini-title">完整演示链路与亮点展示</h2>
-                    <div className="mini-actions">
-                      <button type="button" className="ghost-btn" onClick={() => goReportSection('risk-section')}>
-                        跳到风险预警
-                      </button>
-                      <button type="button" className="ghost-btn" onClick={() => goReportSection('weekly-section')}>
-                        跳到周报趋势
-                      </button>
-                      <button type="button" className="ghost-btn" onClick={() => setShowDemoFlow((value) => !value)}>
-                        {showDemoFlow ? '收起链路' : '展开链路'}
-                      </button>
-                    </div>
-                  </section>
+                  <section className="report-shell">
+                    <section className="mini-hero-card report-hero">
+                      <p className="mini-kicker">演示报告</p>
+                      <h2 className="mini-title">样例报告与动态演示双页面</h2>
+                      <p className="mini-subtitle">一个用于现场生成疼痛样例报告，一个用于高级动效讲故事。</p>
 
-                  {showDemoFlow ? (
-                    <section className="report-flow-shell">
-                      <PainCapturePanel />
-                      <AIExtractPanel />
-                      <RiskAlertPanel />
-                      <WeeklyReportPanel />
-                      <AskRagPanel />
-                      <FamilyPanel />
+                      <div className="report-page-switch" role="tablist" aria-label="报告页面切换">
+                        <button
+                          type="button"
+                          className={reportPage === 'sample' ? 'report-page-btn report-page-btn--active' : 'report-page-btn'}
+                          onClick={() => setReportPage('sample')}
+                        >
+                          样例报告页
+                        </button>
+                        <button
+                          type="button"
+                          className={reportPage === 'showcase' ? 'report-page-btn report-page-btn--active' : 'report-page-btn'}
+                          onClick={() => setReportPage('showcase')}
+                        >
+                          动态演示页
+                        </button>
+                      </div>
                     </section>
-                  ) : null}
+
+                    {reportPage === 'sample' ? (
+                      <section className="report-sample-shell" key="sample-report-page">
+                        <article className="mini-card report-generator-card">
+                          <h3>疼痛样例报告生成器</h3>
+                          <p>基于当前场景与采集结果，一键生成可展示的样例报告。</p>
+                          <div className="report-generator-meta">
+                            <span>当前场景：{scenario.title}</span>
+                            <span>风险等级：{riskTagMap[scenario.riskLevel]}</span>
+                          </div>
+                          <div className="mini-actions">
+                            <button type="button" className="primary-btn" onClick={handleGenerateSampleReport}>
+                              生成疼痛样例报告
+                            </button>
+                            <button type="button" className="ghost-btn" onClick={() => setShowDemoFlow((value) => !value)}>
+                              {showDemoFlow ? '收起技术链路' : '展开技术链路'}
+                            </button>
+                          </div>
+                        </article>
+
+                        {sampleReport ? (
+                          <article className="report-sheet">
+                            <header className="report-sheet__header">
+                              <h3>舒伴 SoothPal 疼痛样例报告</h3>
+                              <span>生成时间：{sampleReport.generatedAt}</span>
+                            </header>
+
+                            <div className="report-sheet__grid">
+                              <div>
+                                <p className="report-label">患者称呼</p>
+                                <strong>{sampleReport.patientName}</strong>
+                              </div>
+                              <div>
+                                <p className="report-label">风险等级</p>
+                                <strong>{sampleReport.riskLabel}</strong>
+                              </div>
+                              <div>
+                                <p className="report-label">7日均值</p>
+                                <strong>{sampleReport.avgPain}</strong>
+                              </div>
+                              <div>
+                                <p className="report-label">峰值强度</p>
+                                <strong>{sampleReport.peakPain}/10</strong>
+                              </div>
+                            </div>
+
+                            <section className="report-block">
+                              <h4>疼痛概况</h4>
+                              <p>场景：{sampleReport.scenarioTitle}</p>
+                              <p>重点区域：{sampleReport.keyRegion}</p>
+                              <p>{sampleReport.trend}</p>
+                            </section>
+
+                            <section className="report-block">
+                              <h4>关键发现</h4>
+                              <ul>
+                                {sampleReport.findings.map((item) => (
+                                  <li key={item}>{item}</li>
+                                ))}
+                              </ul>
+                            </section>
+
+                            <section className="report-block">
+                              <h4>建议动作</h4>
+                              <ul>
+                                {sampleReport.actions.map((item) => (
+                                  <li key={item}>{item}</li>
+                                ))}
+                              </ul>
+                            </section>
+                          </article>
+                        ) : (
+                          <article className="report-sheet report-sheet--placeholder">
+                            <h3>等待生成样例报告</h3>
+                            <p>点击上方按钮后，将自动填充风险、趋势与建议内容，适合答辩现场演示。</p>
+                          </article>
+                        )}
+
+                        {showDemoFlow ? (
+                          <section className="report-flow-shell">
+                            <PainCapturePanel />
+                            <AIExtractPanel />
+                            <RiskAlertPanel />
+                            <WeeklyReportPanel />
+                            <AskRagPanel />
+                            <FamilyPanel />
+                          </section>
+                        ) : null}
+                      </section>
+                    ) : (
+                      <section className="showcase-shell" key="showcase-page">
+                        <article className="showcase-hero-card">
+                          <p className="showcase-kicker">SoothPal 动态演示</p>
+                          <h3>让评委看到“产品级体验”的动态演示主页</h3>
+                          <p>
+                            从零负担采集到风险预警，再到家属协同，页面会用连续动效讲完整个价值链，
+                            更像成熟产品发布页，而不是静态功能堆叠。
+                          </p>
+                          <div className="showcase-actions">
+                            <button type="button" className="primary-btn" onClick={() => setReportPage('sample')}>
+                              去生成样例报告
+                            </button>
+                            <button type="button" className="ghost-btn" onClick={() => goReportSection('risk-section')}>
+                              直达风险链路
+                            </button>
+                          </div>
+                        </article>
+
+                        <section className="showcase-feature-grid">
+                          <article className="showcase-feature-card">
+                            <span>10 秒采集</span>
+                            <strong>2D 人体涂抹 + NRS</strong>
+                            <p>用户像点地图一样完成部位和强度上报，采集路径极短。</p>
+                          </article>
+                          <article className="showcase-feature-card">
+                            <span>可解释 AI</span>
+                            <strong>RAG + 引用 + 护栏</strong>
+                            <p>每次问答给出引用来源，命中红旗征象时优先就医建议。</p>
+                          </article>
+                          <article className="showcase-feature-card">
+                            <span>风险闭环</span>
+                            <strong>L1/L2/L3 分级联动</strong>
+                            <p>患者端、家属端、报告端同步响应，形成完整管理闭环。</p>
+                          </article>
+                        </section>
+
+                        <section className="showcase-timeline">
+                          <article className="showcase-timeline-item">
+                            <i>01</i>
+                            <div>
+                              <h4>称呼建档</h4>
+                              <p>先建立关系感，再进行症状采集。</p>
+                            </div>
+                          </article>
+                          <article className="showcase-timeline-item">
+                            <i>02</i>
+                            <div>
+                              <h4>疼痛录入</h4>
+                              <p>部位、强度、语音结构化一步完成。</p>
+                            </div>
+                          </article>
+                          <article className="showcase-timeline-item">
+                            <i>03</i>
+                            <div>
+                              <h4>报告输出</h4>
+                              <p>自动生成趋势摘要与干预建议，便于答辩展示。</p>
+                            </div>
+                          </article>
+                        </section>
+                      </section>
+                    )}
+                  </section>
                 </>
               ) : null}
             </div>
